@@ -1,8 +1,11 @@
-const express = require('express')
-const app = express()
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+const express = require("express");
 
-app.get('/', (req, res) => {})
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.listen(8080, () => console.log('Server started on 8080'))
+const PORT = 8080;
+const server = app.listen(PORT, () =>
+  console.log(`🚀 Server started on port http://localhost:${PORT}`),
+);
+server.on("error", (err) => console.log(err));
