@@ -1,0 +1,1 @@
+[{"producto":"cafetera","precio":250,"id":1},{"producto":"pochoclera","precio":150,"id":2},{"producto":"tostadora","precio":100,"id":3},{"producto":"afeitadora","precio":"250","id":4},{"producto":"licuadora","precio":"300","id":5},{"producto":"batidora","precio":"150","id":6},{"producto":"batidora","precio":"150","id":7},{"producto":"licuadora","precio":"150","id":8}]
