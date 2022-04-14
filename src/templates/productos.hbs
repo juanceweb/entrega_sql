@@ -1,10 +1,10 @@
 <h1>Productos</h1>
 <ul>
     {{#each productos}}
+        <li>Id: {{this.id}}</li>
         <li>Producto: {{this.producto}}</li>
         <li>Precio: {{this.precio}}</li>
-        <li>Id: {{this.id}}</li>
+        <li>Stock: {{this.stock}}</li>
         <br>
     {{/each}}
 </ul>
-<a href="/" class="btn btn-primary">Ir a Carga de Productos</a>

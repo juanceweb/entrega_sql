@@ -1,34 +1,40 @@
-const express = require("express");
-const http = require("http")
+import express from "express"
+import * as http from 'http';
+import { Server } from "socket.io";
+import { Productos } from "./class_producto.js"
+import { Chats } from "./class_chat.js"
+import { engine } from 'express-handlebars';
+import { config_Maria, config_Lite } from "./bds.js";
+
+//----------------------------------------------------
+
 const app = express()
-const fs = require("fs")
 const server = http.createServer(app)
-const { Server } = require("socket.io")
 const io = new Server(server)
-const {engine} = require("express-handlebars")
+
+//----------------------------------------------------
 
 io.on("connection", async (socket) => {
   // Apenas se conecta
-  console.log("Nuevo usuario")
-  socket.emit("mensajeConexion", "Bienvenido!")
-  
-  io.sockets.emit("messageBack", await chat.getAll())
+    console.log("Nuevo usuario")
+    socket.emit("mensajeConexion", "Bienvenido!")
+    io.sockets.emit("messageBack", await chat.read_chats())
 
   // Evento Mensaje al desconectarse
-  socket.on("disconnect", () => {
-    console.log("Chau usuario")
-  })
+    socket.on("disconnect", () => {
+        console.log("Chau usuario")
+    })
 
   // Evento que envia respuesta al front
-  socket.on("mensajeRespuesta", (data) => {
-    console.log(data)
-  })
+    socket.on("mensajeRespuesta", (data) => {
+        console.log(data)
+    })
 
   // Evento que recien mensaje al front
-  socket.on("messageFront", async (data) => {
-    const salvar = await chat.save(data)
-    io.sockets.emit("messageBack", await chat.getAll())
-  })
+    socket.on("messageFront", async (data) => {
+        await chat.add_chat(data)
+        io.sockets.emit("messageBack", await chat.read_chats())
+    })
 })
 // --------------------------------------------------
 
@@ -46,126 +52,64 @@ app.engine(
     engine({
         extname: ".hbs",
         defaultLayout: "index.hbs",
-        layoutsDir: __dirname + "/templates/layouts",
+        layoutsDir: "src/templates/layouts",
     }),
 );
 
 // -------------------------------------------------------
 
 app.get("/", (req,res) => {
-    res.render("main", {})
+    res.status(200).render("cargar", {})
 })
 
-app.post("/", async (req, res) => {
-    const { body } = req;
-    await archivo.save(body);
+app.get("/chat", (req,res) => {
     res.status(200).render("main", {})
 })
 
-app.get("/productos", async (req, res) => {
-    const productos = await archivo.getAll()
+app.get("/cargar_producto", async (req, res) => {
+    res.status(200).render("cargar", {})
+})
+
+app.get("/eliminar_producto", async (req, res) => {
+    res.status(200).render("eliminar", {})
+})
+
+app.get("/ver_productos", async (req, res) => {
+    const productos = await bd1.read_productos()
     res.status(200).render("productos", {productos})
+})
+
+app.post("/ver_productos", async (req, res) => {
+    const { body } = req;
+    await bd1.add_producto(body)
+    const productos = await bd1.read_productos()
+    res.status(200).render("productos", {productos})
+})
+
+app.delete("/eliminar_producto/:id", async (req, res) => {
+    const { id } = req.params;
+    const respuesta = await bd1.delete_producto(id)
+    res.status(200).json(respuesta)
+})
+
+app.put("/modificar_producto/:id", async (req, res) => {
+    const { id } = req.params;
+    const { body } = req;
+    const respuesta = await bd1.update_producto(body, id)
+    res.status(200).json(respuesta)
 })
 
 // --------------------------------------------------
 
 const PORT = 8080;
 server.listen(PORT, () =>
-  console.log(`🚀 Server started on port http://localhost:${PORT}`),
+    console.log(`🚀 Server started on port http://localhost:${PORT}`),
 );
 server.on("error", (err) => console.log(err));
 
 
 // --------------------------------------------------
 
+const bd1 = new Productos(config_Maria, "productos")
+const chat = new Chats(config_Lite, "chats")
 
-class Contenedor{
-  constructor(archivo){
-      this.productos = []
-      this.maxID = 0
-      this.archivo = archivo
-  }
-
-  async save(producto){
-      await this.getAll()
-      this.maxId++
-      producto.id = this.maxId
-      this.productos.push(producto)
-      try {
-          await fs.promises.writeFile(this.archivo, JSON.stringify(this.productos))
-          return producto
-      }
-      catch (error){
-          throw new Error(error)
-      }
-  }
-
-  async getById(id){
-      try {
-          const resultado = await this.getAll()
-          const found = resultado.find(element => element.id == id)
-          if (found == undefined) {
-              return {error: "producto no encontrado"}
-          }
-          else{
-              return found
-          }
-      }
-      catch (error){
-          throw new Error(error)
-      }
-
-  }
-
-  async getAll(){
-      try {
-          const productos = JSON.parse( await fs.promises.readFile(this.archivo, "utf-8"))
-          this.productos = productos
-          this.productos.map((producto) => {
-              if (producto.id && this.maxID < producto.id)
-              this.maxId = producto.id
-              
-          })
-          return this.productos
-      } 
-      catch(error) {
-          throw new Error(error)
-      }
-  }
-
-  async deleteById(id){
-      try {
-          const resultado = await this.getAll()
-          const found = resultado.find(element => element.id == id)
-          if (found == undefined) {
-              return null
-          }
-          else{
-              const new_array = resultado.filter(element => element.id != found.id)
-              try {
-                  await fs.promises.writeFile(this.archivo, JSON.stringify(new_array))
-                  return "producto borrado!"
-              }
-              catch (error){
-                  throw new Error(error)
-              }
-          }
-      }
-      catch (error){
-          throw new Error(error)
-      }
-  }
-
-  async deleteAll(){
-      try {
-          await fs.promises.writeFile(this.archivo, JSON.stringify([]))
-      }
-      catch (error){
-          throw new Error(error)
-      }
-  }
-
-}
-
-archivo = new Contenedor("./src/archivo.txt")
-chat = new Contenedor("./src/chats.txt")
